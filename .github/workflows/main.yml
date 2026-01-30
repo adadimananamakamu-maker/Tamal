@@ -1,4 +1,4 @@
-name: Build APK Auto Search ZIP
+name: Build APK Fix Final
 
 on:
   workflow_dispatch:
@@ -9,27 +9,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cari dan Ekstrak ZIP
+      - name: Ekstrak File
         run: |
-          # Perintah ini akan mencari file yang mengandung kata 'darknes' dan mengekstraknya
-          ZIP_FILE=$(find . -name "*darknes*.zip" -o -name "*darknes*.ZIP" | head -n 1)
+          # Ekstrak file yang kamu upload
+          unzip playthedarknes.zip
           
-          if [ -z "$ZIP_FILE" ]; then
-            echo "Error: File ZIP tidak ditemukan di repository!"
-            ls -R
-            exit 1
-          fi
-          
-          echo "Mengekstrak: $ZIP_FILE"
-          unzip "$ZIP_FILE"
-          
-          # Cari pubspec.yaml dan tarik ke folder utama
-          PUBSPEC_PATH=$(find . -name "pubspec.yaml" -print -quit)
-          if [ -n "$PUBSPEC_PATH" ]; then
-            PROJECT_ROOT=$(dirname "$PUBSPEC_PATH")
-            cp -r "$PROJECT_ROOT"/* .
+          # Trik untuk mencari pubspec.yaml dan memindahkan isinya ke luar
+          # Ini memperbaiki masalah folder di dalam folder
+          target=$(find . -name "pubspec.yaml" -printf "%h\n" | head -n 1)
+          if [ -n "$target" ]; then
+            echo "Ditemukan di: $target"
+            cp -r "$target"/* .
           else
-            echo "Error: pubspec.yaml tidak ditemukan di dalam ZIP!"
+            echo "Error: File pubspec.yaml tidak ada di dalam ZIP!"
             exit 1
           fi
 
@@ -37,14 +29,15 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Build APK
+      - name: Build Proses
         run: |
+          # Paksa buat ulang struktur android agar fresh
           flutter create . --overwrite
           flutter pub get
           flutter build apk --release
 
-      - name: Upload Hasil
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: aplikasi-jadi
           path: build/app/outputs/flutter-apk/app-release.apk
