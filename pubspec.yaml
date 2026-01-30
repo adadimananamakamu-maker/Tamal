@@ -1,4 +1,4 @@
-name: xxo25
+name: playthedarknes
 description: "Bug WhatsApp Crasher"
 publish_to: 'none'
 version: 2.0.0
@@ -55,3 +55,4 @@ flutter:
     - family: ShareTechMono
       fonts:
         - asset: fonts/ShareTechMono-Regular.ttf
+
