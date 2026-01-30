@@ -9,23 +9,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-      - uses: subosito/flutter-action@v2
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          # Gue naikin ke versi yang diminta log lo
+          flutter-version: '3.22.2' 
           channel: 'stable'
 
-      - name: Build Start
+      - name: Build Project
         run: |
           flutter pub get
-          flutter clean
-          flutter build apk --release --split-per-abi
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: PlayTheDarknes-APK
-          path: build/app/outputs/flutter-apk/*.apk
+          flutter build apk --release
