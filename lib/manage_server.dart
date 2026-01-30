@@ -18,9 +18,9 @@ class _ManageServerPageState extends State<ManageServerPage> {
   final _userController = TextEditingController();
   final _passController = TextEditingController();
 
-  // --- Warna Tema Hitam Merah ---
+  // --- Warna Tema ---
   final Color primaryDark = Colors.black;
-  final Color primaryWhite = Co{lors.white;
+  final Color primaryWhite = Colors.white; // ✅ Tadi salah tulis: Co{lors
   final Color accentRed = Colors.redAccent;
   final Color cardDark = const Color(0xFF1A1A1A);
 
@@ -79,7 +79,7 @@ class _ManageServerPageState extends State<ManageServerPage> {
 
   Future<void> _deleteVps(String host) async {
     final uri = Uri.parse('http://dianaxyz-offc.hostingercloud.web.id:4278/delServer');
-    try 
+    try { // ✅ Tadi kurang kurung kurawal buka {
       final res = await http.post(uri, body: {
         'key': widget.keyToken,
         'host': host,
