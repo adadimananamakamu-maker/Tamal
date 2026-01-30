@@ -1,4 +1,4 @@
-name: Build APK Sekali Klik
+name: Build APK Tanpa ZIP
 
 on:
   workflow_dispatch:
@@ -9,38 +9,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ekstrak File ZIP Apapun
-        run: |
-          # Cari file .zip apa aja yang ada di repo
-          ZIP_FILE=$(ls *.zip | head -n 1)
-          
-          if [ -z "$ZIP_FILE" ]; then
-            echo "KOK KOSONG? ZIP-nya belum ke-upload beneran itu."
-            ls -R
-            exit 1
-          fi
-
-          echo "Bongkar file: $ZIP_FILE"
-          unzip -o "$ZIP_FILE"
-          
-          # Cari pubspec.yaml dan bawa ke folder utama
-          TARGET=$(find . -name "pubspec.yaml" -printf "%h\n" | head -n 1)
-          if [ -n "$TARGET" ]; then
-            cp -r "$TARGET"/* .
-          fi
-
+      # Mengatur lingkungan Flutter
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Hajarr Build
+      # Proses merakit APK
+      - name: Build APK
         run: |
+          # Perintah ini untuk memperbaiki struktur folder otomatis
           flutter create . --overwrite
           flutter pub get
           flutter build apk --release
 
-      - name: Ambil APK-nya Dimari
+      # Mengambil hasil APK untuk didownload
+      - name: Download Hasil APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: aplikasi-darknes
           path: build/app/outputs/flutter-apk/app-release.apk
