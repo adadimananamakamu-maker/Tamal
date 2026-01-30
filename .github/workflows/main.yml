@@ -1,4 +1,4 @@
-name: Build APK Project Asli
+name: Build APK Fix Struktur
 
 on:
   workflow_dispatch:
@@ -7,31 +7,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. Ambil kodingan dari repository
       - uses: actions/checkout@v4
 
-      # 2. Siapkan Java (penting untuk build Android)
       - uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 3. Siapkan Flutter
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      # 4. Ambil Library & Build APK
-      - name: Build APK Release
+      - name: Build APK Anti Error
         run: |
-          # Perintah ini untuk download library yang kamu pakai
+          # 1. Paksa bikin kerangka Android tapi JANGAN nimpa folder lib
+          # Kita hapus dulu folder android lama kalau ada yang rusak
+          rm -rf android
+          flutter create . --platforms android
+          
+          # 2. Ambil library
           flutter pub get
-          # Langsung rakit APK tanpa menimpa kodingan lib/
+          
+          # 3. Rakit APK
           flutter build apk --release
 
-      # 5. Simpan Hasilnya agar bisa di-download
-      - name: Upload APK ke Artifacts
+      - name: Ambil File APK
         uses: actions/upload-artifact@v4
         with:
-          name: aplikasi-asli-kamu
+          name: aplikasi-asli-fix
           path: build/app/outputs/flutter-apk/app-release.apk
