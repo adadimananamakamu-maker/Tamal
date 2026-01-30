@@ -1,0 +1,32 @@
+name: Build APK Dari ZIP
+
+on:
+  workflow_dispatch: # Supaya muncul tombol "Run" manual
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ekstrak File Project
+        run: unzip "play the darktes.zip" # Membuka file ZIP kamu
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Setup Project
+        run: |
+          flutter create .
+          flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload Hasil
+        uses: actions/upload-artifact@v4
+        with:
+          name: aplikasi-siap-install
+          path: build/app/outputs/flutter-apk/app-release.apk
+          
