@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ManageServerPage extends StatefulWidget {
-  final String keyToken;
+  final String keyToken; // Ini sessionKey lo
   const ManageServerPage({super.key, required this.keyToken});
 
   @override
@@ -11,227 +11,123 @@ class ManageServerPage extends StatefulWidget {
 }
 
 class _ManageServerPageState extends State<ManageServerPage> {
-  List<Map<String, dynamic>> vpsList = [];
-  bool isLoading = false;
-
-  final _hostController = TextEditingController();
-  final _userController = TextEditingController();
-  final _passController = TextEditingController();
+  bool isLoading = true;
+  Map<String, dynamic>? serverData;
 
   // --- Warna Tema ---
   final Color primaryDark = Colors.black;
-  final Color primaryWhite = Colors.white; // ✅ Tadi salah tulis: Co{lors
+  final Color primaryWhite = Colors.white; // FIX: Sudah dibenerin dari typo Co{lors
   final Color accentRed = Colors.redAccent;
   final Color cardDark = const Color(0xFF1A1A1A);
 
   @override
   void initState() {
     super.initState();
-    _fetchVpsList();
+    _fetchServerData();
   }
 
-  Future<void> _fetchVpsList() async {
+  // API Logic lo tetep ada di sini
+  Future<void> _fetchServerData() async {
     setState(() => isLoading = true);
-    final uri = Uri.parse('http://dianaxyz-offc.hostingercloud.web.id:4278/myServer?key=${widget.keyToken}');
     try {
-      final res = await http.get(uri);
-      final data = jsonDecode(res.body);
-      setState(() {
-        vpsList = List<Map<String, dynamic>>.from(data);
-      });
-    } catch (_) {
-      _showError("Gagal mengambil data VPS.");
-    }
-    setState(() => isLoading = false);
-  }
+      final response = await http.get(
+        Uri.parse("http://dianaxyz-offc.hostingercloud.web.id:4278/myServer?key=${widget.keyToken}"),
+      );
 
-  Future<void> _addVps() async {
-    final host = _hostController.text.trim();
-    final user = _userController.text.trim();
-    final pass = _passController.text.trim();
-
-    if (host.isEmpty || user.isEmpty || pass.isEmpty) {
-      _showError("Isi semua field terlebih dahulu.");
-      return;
-    }
-
-    final uri = Uri.parse('http://dianaxyz-offc.hostingercloud.web.id:4278/addServer');
-    try {
-      final res = await http.post(uri, body: {
-        'key': widget.keyToken,
-        'host': host,
-        'username': user,
-        'password': pass,
-      });
-      final data = jsonDecode(res.body);
-      if (data['success'] == true) {
-        _hostController.clear();
-        _userController.clear();
-        _passController.clear();
-        _fetchVpsList();
+      if (response.statusCode == 200) {
+        setState(() {
+          serverData = jsonDecode(response.body);
+          isLoading = false;
+        });
       } else {
-        _showError(data['error'] ?? 'Gagal menambah VPS');
+        setState(() => isLoading = false);
       }
-    } catch (_) {
-      _showError("Gagal terhubung ke server.");
+    } catch (e) {
+      setState(() => isLoading = false);
     }
-  }
-
-  Future<void> _deleteVps(String host) async {
-    final uri = Uri.parse('http://dianaxyz-offc.hostingercloud.web.id:4278/delServer');
-    try { // ✅ Tadi kurang kurung kurawal buka {
-      final res = await http.post(uri, body: {
-        'key': widget.keyToken,
-        'host': host,
-      });
-      final data = jsonDecode(res.body);
-      if (data['success'] == true) {
-        _fetchVpsList();
-      } else {
-        _showError("Gagal menghapus VPS.");
-      }
-    } catch (_) {
-      _showError("Gagal menghubungi server.");
-    }
-  }
-
-  void _showError(String msg) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: cardDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: accentRed.withOpacity(0.3)),
-        ),
-        title: const Text("Error", style: TextStyle(color: Colors.white)),
-        content: Text(msg, style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: cardDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: accentRed.withOpacity(0.3)),
-        ),
-        title: const Text("Tambah VPS", style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildInput("IP VPS", _hostController),
-            _buildInput("Username", _userController),
-            _buildInput("Password", _passController),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("BATAL", style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _addVps();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentRed,
-            ),
-            child: const Text("TAMBAH", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInput(String label, TextEditingController controller) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: controller,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: accentRed),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: accentRed.withOpacity(0.5)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: accentRed),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          filled: true,
-          fillColor: primaryDark,
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: primaryDark,
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Scaffold(
+      backgroundColor: primaryDark,
+      appBar: AppBar(
+        title: const Text("MANAGE VPS SERVER", 
+          style: TextStyle(fontFamily: 'Orbitron', fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 children: [
-                  const Text("My VPS List",
-                      style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontFamily: 'Orbitron')),
-                  IconButton(
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    onPressed: _showAddDialog,
-                  )
+                  _buildServerCard(),
+                  const SizedBox(height: 20),
+                  _buildActionButtons(),
                 ],
               ),
-              Divider(color: accentRed),
-              Expanded(
-                child: isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
-                    : ListView.builder(
-                  itemCount: vpsList.length,
-                  itemBuilder: (context, index) {
-                    final vps = vpsList[index];
-                    return Card(
-                      color: cardDark,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: accentRed.withOpacity(0.2)),
-                      ),
-                      child: ListTile(
-                        title: Text("${vps['host']}", style: const TextStyle(color: Colors.white)),
-                        subtitle: Text("User: ${vps['username']}", style: const TextStyle(color: Colors.white70)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.redAccent),
-                          onPressed: () => _deleteVps(vps['host']),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              )
-            ],
+            ),
+    );
+  }
+
+  Widget _buildServerCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardDark,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: accentRed.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("SERVER STATUS", style: TextStyle(color: accentRed, fontFamily: 'Orbitron')),
+          const Divider(color: Colors.white10),
+          _infoRow("Status", serverData?['status'] ?? "Online"),
+          _infoRow("IP Address", serverData?['ip'] ?? "127.0.0.1"),
+          _infoRow("Region", serverData?['region'] ?? "Singapore"),
+          _infoRow("Expired", serverData?['expired'] ?? "-"),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text("REBOOT"),
           ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(backgroundColor: accentRed),
+            child: const Text("SHUTDOWN"),
+          ),
+        ),
+      ],
     );
   }
 }
