@@ -1,4 +1,4 @@
-name: Build APK dengan Assets
+name: Build APK Final
 
 on:
   workflow_dispatch:
@@ -9,35 +9,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ekstrak File Project
+      - name: Ekstrak File ZIP
         run: |
-          # Ekstrak file yang baru diupload
-          unzip project.zip
+          # Perintah ini akan mencari file .zip apa pun (besar/kecil)
+          ZIP_NAME=$(ls *.zip *.ZIP 2>/dev/null | head -n 1)
           
-          # Mencari lokasi pubspec.yaml
-          target=$(find . -name "pubspec.yaml" -printf "%h\n" | head -n 1)
+          if [ -z "$ZIP_NAME" ]; then
+            echo "KASIH TAU: File ZIP tidak ketemu di GitHub!"
+            ls -R
+            exit 1
+          fi
           
-          # Memindahkan semua isi folder project (termasuk assets) ke root
-          if [ -n "$target" ]; then
-            cp -r "$target"/* .
-            echo "Project dan Assets berhasil dipindahkan dari $target"
+          echo "Mengekstrak file: $ZIP_NAME"
+          unzip "$ZIP_NAME"
+          
+          # Cari pubspec.yaml dan tarik ke depan
+          TARGET=$(find . -name "pubspec.yaml" -printf "%h\n" | head -n 1)
+          if [ -n "$TARGET" ]; then
+            cp -r "$TARGET"/* .
           fi
 
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Persiapan Build
+      - name: Build APK
         run: |
-          # Overwrite agar folder android dibuat otomatis
           flutter create . --overwrite
           flutter pub get
+          flutter build apk --release
 
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Download Hasil APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-with-assets
+          name: aplikasi-jadi
           path: build/app/outputs/flutter-apk/app-release.apk
