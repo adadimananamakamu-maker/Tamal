@@ -1,4 +1,4 @@
-name: Build APK Auto Unzip
+name: Build APK Auto Search ZIP
 
 on:
   workflow_dispatch:
@@ -9,17 +9,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ekstrak dan Atur Folder
+      - name: Cari dan Ekstrak ZIP
         run: |
-          # 1. Ekstrak ZIP
-          unzip playthedarknes.zip
+          # Perintah ini akan mencari file yang mengandung kata 'darknes' dan mengekstraknya
+          ZIP_FILE=$(find . -name "*darknes*.zip" -o -name "*darknes*.ZIP" | head -n 1)
           
-          # 2. Cari di mana pubspec.yaml berada dan pindahkan semua isinya ke folder utama
-          # Ini penting jika file kamu ada di dalam folder 'playthedarknes/lib/...'
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Error: File ZIP tidak ditemukan di repository!"
+            ls -R
+            exit 1
+          fi
+          
+          echo "Mengekstrak: $ZIP_FILE"
+          unzip "$ZIP_FILE"
+          
+          # Cari pubspec.yaml dan tarik ke folder utama
           PUBSPEC_PATH=$(find . -name "pubspec.yaml" -print -quit)
           if [ -n "$PUBSPEC_PATH" ]; then
             PROJECT_ROOT=$(dirname "$PUBSPEC_PATH")
-            echo "Project ditemukan di: $PROJECT_ROOT"
             cp -r "$PROJECT_ROOT"/* .
           else
             echo "Error: pubspec.yaml tidak ditemukan di dalam ZIP!"
@@ -30,14 +37,13 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Jalankan Build
+      - name: Build APK
         run: |
-          # Overwrite untuk memastikan folder android/ios dibuat otomatis
           flutter create . --overwrite
           flutter pub get
           flutter build apk --release
 
-      - name: Download APK Jadi
+      - name: Upload Hasil
         uses: actions/upload-artifact@v4
         with:
           name: app-release
