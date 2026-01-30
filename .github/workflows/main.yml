@@ -1,37 +1,31 @@
-name: Build Vionix Final
+name: Build PlayTheDarknes APK
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-
       - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.19.0'
           channel: 'stable'
 
-      - name: Build APK Anti Demo
+      - name: Build Start
         run: |
-          # 1. Bikin struktur pendukung TANPA nyentuh folder lib
-          # Kita cuma minta mesin bikin folder android/ yang ilang
-          flutter create . --platforms android
-          
-          # 2. Ambil library
           flutter pub get
-          
-          # 3. Rakit APK
-          flutter build apk --release
+          flutter clean
+          flutter build apk --release --split-per-abi
 
-      - name: Ambil File APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: VionixEngine-Sukses
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: PlayTheDarknes-APK
+          path: build/app/outputs/flutter-apk/*.apk
