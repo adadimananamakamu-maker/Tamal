@@ -1,26 +1,31 @@
-name: Cek Isi ZIP
+name: Build APK Final
 
 on:
   workflow_dispatch:
 
 jobs:
-  check-files:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ekstrak File
+      - name: Ekstrak File Apapun
         run: |
-          # Membuka file
-          unzip playthedarknes.zip
+          # Perintah ini akan otomatis unzip file .zip apapun yang dia temukan
+          unzip *.zip
           
-          # Menampilkan daftar file yang berhasil diekstrak ke log
-          echo "--- DAFTAR FILE SETELAH UNZIP ---"
-          ls -R
-          
-      - name: Simpan Hasil Ekstrak ke Artifact
-        uses: actions/upload-artifact@v4
+          # Cari pubspec.yaml dan pindahkan isinya ke folder utama
+          PUBSPEC_PATH=$(find . -name "pubspec.yaml" -print -quit)
+          if [ -n "$PUBSPEC_PATH" ]; then
+            PROJECT_ROOT=$(dirname "$PUBSPEC_PATH")
+            cp -r "$PROJECT_ROOT"/* .
+            echo "Project found in $PROJECT_ROOT"
+          else
+            echo "Error: pubspec.yaml tidak ada di dalam ZIP!"
+            ls -R # Menampilkan daftar file untuk pengecekan jika gagal
+            exit 1
+          fi
+
+      - uses: subosito/flutter-action@v2
         with:
-          name: hasil-ekstrak-zip
-          path: .
-          # Kita upload semuanya untuk kita cek strukturnya
+          channel: '
