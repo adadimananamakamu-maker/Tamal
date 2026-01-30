@@ -1,4 +1,4 @@
-name: Build APK Vionix Fix Asli
+name: Build Vionix Final
 
 on:
   workflow_dispatch:
@@ -18,15 +18,20 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Build APK
+      - name: Build APK Anti Demo
         run: |
-          # JANGAN pake flutter create lagi biar gak ketimpa demo
-          # Langsung ambil bahan dan rakit
+          # 1. Bikin struktur pendukung TANPA nyentuh folder lib
+          # Kita cuma minta mesin bikin folder android/ yang ilang
+          flutter create . --platforms android
+          
+          # 2. Ambil library
           flutter pub get
+          
+          # 3. Rakit APK
           flutter build apk --release
 
-      - name: Ambil APK
+      - name: Ambil File APK
         uses: actions/upload-artifact@v4
         with:
-          name: Vionix-Engine-Asli
+          name: VionixEngine-Sukses
           path: build/app/outputs/flutter-apk/app-release.apk
