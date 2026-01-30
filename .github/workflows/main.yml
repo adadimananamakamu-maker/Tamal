@@ -1,4 +1,4 @@
-name: Build APK Fix Struktur
+name: Build APK Vionix Engine Final
 
 on:
   workflow_dispatch:
@@ -18,21 +18,22 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Build APK Anti Error
+      - name: Build Proses
         run: |
-          # 1. Paksa bikin kerangka Android tapi JANGAN nimpa folder lib
-          # Kita hapus dulu folder android lama kalau ada yang rusak
-          rm -rf android
-          flutter create . --platforms android
+          # Buat ulang struktur android agar fresh
+          flutter create . --platforms android --overwrite
           
-          # 2. Ambil library
+          # Bersihkan sisa build lama
+          flutter clean
+          
+          # Ambil dependencies
           flutter pub get
           
-          # 3. Rakit APK
+          # Build APK (Release mode)
           flutter build apk --release
 
-      - name: Ambil File APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aplikasi-asli-fix
+          name: VionixEngine-Final
           path: build/app/outputs/flutter-apk/app-release.apk
