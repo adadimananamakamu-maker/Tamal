@@ -1,4 +1,4 @@
-name: Build APK Vionix Engine Final
+name: Build APK Vionix Fix Asli
 
 on:
   workflow_dispatch:
@@ -18,22 +18,15 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Build Proses
+      - name: Build APK
         run: |
-          # Buat ulang struktur android agar fresh
-          flutter create . --platforms android --overwrite
-          
-          # Bersihkan sisa build lama
-          flutter clean
-          
-          # Ambil dependencies
+          # JANGAN pake flutter create lagi biar gak ketimpa demo
+          # Langsung ambil bahan dan rakit
           flutter pub get
-          
-          # Build APK (Release mode)
           flutter build apk --release
 
-      - name: Upload APK
+      - name: Ambil APK
         uses: actions/upload-artifact@v4
         with:
-          name: VionixEngine-Final
+          name: Vionix-Engine-Asli
           path: build/app/outputs/flutter-apk/app-release.apk
