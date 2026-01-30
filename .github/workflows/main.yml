@@ -1,32 +1,26 @@
-name: Build APK Dari ZIP
+name: Cek Isi ZIP
 
 on:
-  workflow_dispatch: # Supaya muncul tombol "Run" manual
+  workflow_dispatch:
 
 jobs:
-  build:
+  check-files:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ekstrak File Project
-        run: unzip "play the darktes.zip" # Membuka file ZIP kamu
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Setup Project
+      - name: Ekstrak File
         run: |
-          flutter create .
-          flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Upload Hasil
+          # Membuka file
+          unzip playthedarknes.zip
+          
+          # Menampilkan daftar file yang berhasil diekstrak ke log
+          echo "--- DAFTAR FILE SETELAH UNZIP ---"
+          ls -R
+          
+      - name: Simpan Hasil Ekstrak ke Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: aplikasi-siap-install
-          path: build/app/outputs/flutter-apk/app-release.apk
-          
+          name: hasil-ekstrak-zip
+          path: .
+          # Kita upload semuanya untuk kita cek strukturnya
