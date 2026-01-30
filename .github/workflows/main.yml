@@ -19,11 +19,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Gue naikin ke versi yang diminta log lo
-          flutter-version: '3.22.2' 
+          # PAKSA PAKE VERSI TERBARU BIAR SDK COCOK
+          flutter-version: '3.27.1' 
           channel: 'stable'
 
-      - name: Build Project
+      - name: Build Start
         run: |
           flutter pub get
           flutter build apk --release
