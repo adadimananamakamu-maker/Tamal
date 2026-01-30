@@ -1,12 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'splash.dart';
-
-const String baseUrl = "http://dianaxyz-offc.hostingercloud.web.id:4278";
+import 'splash.dart'; // Pastikan ini mengarah ke file video splash lo
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,359 +11,104 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> {
   final userController = TextEditingController();
   final passController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
   bool isLoading = false;
-  bool _obscurePassword = true;
-  String? androidId;
+  bool obscurePass = true;
 
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
+  final Color primaryRed = const Color(0xFFE53935);
 
   @override
   void initState() {
     super.initState();
-    _initAnim();
-    initLogin();
+    _loadSavedCredentials();
   }
 
-  void _initAnim() {
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..forward();
-    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-  }
-
-  Future<void> initLogin() async {
-    androidId = await getAndroidId();
-
+  // Ambil data login yang tersimpan biar gak ngetik ulang
+  Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedUser = prefs.getString("username");
-    final savedPass = prefs.getString("password");
-    final savedKey = prefs.getString("key");
+    setState(() {
+      userController.text = prefs.getString('saved_user') ?? '';
+      passController.text = prefs.getString('saved_pass') ?? '';
+    });
+  }
 
-    if (savedUser != null && savedPass != null && savedKey != null) {
-      final uri = Uri.parse(
-          "$baseUrl/myInfo?username=$savedUser&password=$savedPass&androidId=$androidId&key=$savedKey");
-
-      try {
-        final res = await http.get(uri);
-        final data = jsonDecode(res.body);
-
-        if (data['valid'] == true) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SplashScreen(
-                username: savedUser,
-                password: savedPass,
-                role: data['role'],
-                sessionKey: data['key'],
-                expiredDate: data['expiredDate'],
-                listBug: (data['listBug'] as List? ?? [])
-                    .map((e) => Map<String, dynamic>.from(e as Map))
-                    .toList(),
-                listDoos: (data['listDDoS'] as List? ?? [])
-                    .map((e) => Map<String, dynamic>.from(e as Map))
-                    .toList(),
-                news: (data['news'] as List? ?? [])
-                    .map((e) => Map<String, dynamic>.from(e as Map))
-                    .toList(),
-              ),
-            ),
-          );
-        }
-      } catch (_) {}
+  Future<void> _handleLogin() async {
+    if (userController.text.isEmpty || passController.text.isEmpty) {
+      _showSnackBar("Please fill all fields");
+      return;
     }
-  }
-
-  Future<String> getAndroidId() async {
-    final deviceInfo = DeviceInfoPlugin();
-    final android = await deviceInfo.androidInfo;
-    return android.id ?? "unknown_device";
-  }
-
-  Future<void> login() async {
-    if (!_formKey.currentState!.validate()) return;
-    final username = userController.text.trim();
-    final password = passController.text.trim();
 
     setState(() => isLoading = true);
 
+    // Endpoint API Login lo
+    final url = "http://dianaxyz-offc.hostingercloud.web.id:4278/login?user=${userController.text}&pass=${passController.text}";
+
     try {
-      final validate = await http.post(
-        Uri.parse("$baseUrl/validate"),
-        body: {
-          "username": username,
-          "password": password,
-          "androidId": androidId ?? "unknown_device",
-        },
-      );
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      final data = jsonDecode(response.body);
 
-      final validData = jsonDecode(validate.body);
-
-      if (validData['expired'] == true) {
-        _showPopup(
-          title: "⏳ Access Expired",
-          message: "Your access has expired.\nPlease renew it.",
-          color: Colors.orange,
-          showContact: true,
-        );
-      } else if (validData['valid'] != true) {
-        _showPopup(
-          title: "❌ Login Failed",
-          message: "Invalid username or password.",
-          color: Colors.redAccent,
-        );
-      } else {
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        // Simpan login sukses ke SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        prefs.setString("username", username);
-        prefs.setString("password", password);
-        prefs.setString("key", validData['key']);
+        await prefs.setString('saved_user', userController.text);
+        await prefs.setString('saved_pass', passController.text);
 
+        if (!mounted) return;
+
+        // --- NAVIGASI KE SPLASH VIDEO (Kirim Semua Data) ---
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => SplashScreen(
-              username: username,
-              password: password,
-              role: validData['role'],
-              sessionKey: validData['key'],
-              expiredDate: validData['expiredDate'],
-              listBug: (validData['listBug'] as List? ?? [])
-                  .map((e) => Map<String, dynamic>.from(e as Map))
-                  .toList(),
-              listDoos: (validData['listDDoS'] as List? ?? [])
-                  .map((e) => Map<String, dynamic>.from(e as Map))
-                  .toList(),
-              news: (validData['news'] as List? ?? [])
-                  .map((e) => Map<String, dynamic>.from(e as Map))
-                  .toList(),
+            builder: (context) => SplashScreen(
+              username: userController.text,
+              password: passController.text,
+              role: data['role'] ?? 'member',
+              expiredDate: data['expired'] ?? '-',
+              sessionKey: data['key'] ?? '',
+              listBug: List<Map<String, dynamic>>.from(data['list_bug'] ?? []),
+              listDoos: List<Map<String, dynamic>>.from(data['list_ddos'] ?? []),
+              news: data['news'] ?? [],
             ),
           ),
         );
+      } else {
+        _showSnackBar(data['message'] ?? "Login Invalid");
       }
     } catch (e) {
-      _showPopup(
-        title: "⚠️ Connection Error",
-        message: "Failed to connect to the server.\nPlease check your connection.",
-        color: Colors.red,
-      );
+      _showSnackBar("Server Error: Check your connection");
+    } finally {
+      setState(() => isLoading = false);
     }
-
-    setState(() => isLoading = false);
   }
 
-  void _showPopup({
-    required String title,
-    required String message,
-    Color color = Colors.redAccent,
-    bool showContact = false,
-  }) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF12002C),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          title,
-          style: TextStyle(
-              color: color, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white70, fontSize: 14),
-        ),
-        actions: [
-          if (showContact)
-            TextButton(
-              onPressed: () async {
-                await launchUrl(Uri.parse("https://t.me/playthedarkby"),
-                    mode: LaunchMode.externalApplication);
-              },
-              child: const Text(
-                "Contact Admin",
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child:
-            const Text("Close", style: TextStyle(color: Colors.white54)),
-          ),
-        ],
-      ),
+  void _showSnackBar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: primaryRed, behavior: SnackBarBehavior.floating),
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    userController.dispose();
-    passController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final inputWidth = MediaQuery.of(context).size.width * 0.85;
-
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0D0D0D), Color(0xFF330000)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            colors: [Colors.black, primaryRed.withOpacity(0.1), Colors.black],
           ),
         ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Hero(
-                      tag: "logo",
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeInOut,
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          border:
-                          Border.all(color: Colors.red, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.5),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      "Welcome Back",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      "Sign in to continue",
-                      style: TextStyle(color: Colors.white60, fontSize: 14),
-                    ),
-                    const SizedBox(height: 28),
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          _buildInput(
-                              userController, "Username", Icons.person_outline),
-                          const SizedBox(height: 14),
-                          _buildInput(passController, "Password",
-                              Icons.lock_outline, true),
-                          const SizedBox(height: 24),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 400),
-                            width: isLoading ? 50 : inputWidth,
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: isLoading ? null : login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                shadowColor:
-                                Colors.red.withOpacity(0.6),
-                                elevation: 6,
-                              ),
-                              child: isLoading
-                                  ? const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white),
-                              )
-                                  : const Text(
-                                "Sign In",
-                                style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(30),
+            child: Column(
+              children: [
+                Icon(Icons.security, size: 80, color: primaryRed),
+                const SizedBox(height: 20),
+                const Text("X-GATEWAY ACCESS", 
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Orbitron')),
+                const SizedBox(height: 40),
 
-  Widget _buildInput(TextEditingController controller, String label,
-      IconData icon, [bool isPassword = false]) {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.85,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: isPassword ? _obscurePassword : false,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          prefixIcon: Icon(icon, color: Colors.red),
-          suffixIcon: isPassword
-              ? IconButton(
-            icon: Icon(
-              _obscurePassword
-                  ? Icons.visibility_outlined
-                  : Icons.visibility_off_outlined,
-              color: Colors.white54,
-            ),
-            onPressed: () {
-              setState(() {
-                _obscurePassword = !_obscurePassword;
-              });
-            },
-          )
-              : null,
-          border: InputBorder.none,
-          contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-        ),
-      ),
-    );
-  }
-}
+                _buildInputField(userController, "Username", Icons.person_outline, false),
