@@ -1,4 +1,4 @@
-name: Build APK Tanpa ZIP
+name: Build APK Project Asli
 
 on:
   workflow_dispatch:
@@ -7,24 +7,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # 1. Ambil kodingan dari repository
       - uses: actions/checkout@v4
 
-      # Mengatur lingkungan Flutter
+      # 2. Siapkan Java (penting untuk build Android)
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. Siapkan Flutter
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      # Proses merakit APK
-      - name: Build APK
+      # 4. Ambil Library & Build APK
+      - name: Build APK Release
         run: |
-          # Perintah ini untuk memperbaiki struktur folder otomatis
-          flutter create . --overwrite
+          # Perintah ini untuk download library yang kamu pakai
           flutter pub get
+          # Langsung rakit APK tanpa menimpa kodingan lib/
           flutter build apk --release
 
-      # Mengambil hasil APK untuk didownload
-      - name: Download Hasil APK
+      # 5. Simpan Hasilnya agar bisa di-download
+      - name: Upload APK ke Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: aplikasi-darknes
+          name: aplikasi-asli-kamu
           path: build/app/outputs/flutter-apk/app-release.apk
