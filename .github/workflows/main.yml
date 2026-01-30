@@ -1,4 +1,4 @@
-name: Build APK Fix Final
+name: Build APK dengan Assets
 
 on:
   workflow_dispatch:
@@ -9,35 +9,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ekstrak File
+      - name: Ekstrak File Project
         run: |
-          # Ekstrak file yang kamu upload
-          unzip playthedarknes.zip
+          # Ekstrak file yang baru diupload
+          unzip project.zip
           
-          # Trik untuk mencari pubspec.yaml dan memindahkan isinya ke luar
-          # Ini memperbaiki masalah folder di dalam folder
+          # Mencari lokasi pubspec.yaml
           target=$(find . -name "pubspec.yaml" -printf "%h\n" | head -n 1)
+          
+          # Memindahkan semua isi folder project (termasuk assets) ke root
           if [ -n "$target" ]; then
-            echo "Ditemukan di: $target"
             cp -r "$target"/* .
-          else
-            echo "Error: File pubspec.yaml tidak ada di dalam ZIP!"
-            exit 1
+            echo "Project dan Assets berhasil dipindahkan dari $target"
           fi
 
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Build Proses
+      - name: Persiapan Build
         run: |
-          # Paksa buat ulang struktur android agar fresh
+          # Overwrite agar folder android dibuat otomatis
           flutter create . --overwrite
           flutter pub get
-          flutter build apk --release
 
-      - name: Upload APK
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Download Hasil APK
         uses: actions/upload-artifact@v4
         with:
-          name: aplikasi-jadi
+          name: app-release-with-assets
           path: build/app/outputs/flutter-apk/app-release.apk
